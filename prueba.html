@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Números (con Firebase)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        .message {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .list {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .list h2 {
+            margin-bottom: 10px;
+        }
+
+        .list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .list li {
+            padding: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Registro de Números</h1>
+
+    <form id="form">
+        <input type="text" id="nombre" placeholder="Nombre" required>
+        <input type="text" id="apellido" placeholder="Apellido" required>
+        <input type="number" id="numero" placeholder="Número (1-99)" min="1" max="99" required>
+        <button type="submit">Registrar</button>
+    </form>
+
+    <div class="message" id="message"></div>
+
+    <div class="list" id="list">
+        <h2>Lista de números registrados:</h2>
+        <ul id="registro-lista"></ul>
+    </div>
+
+    <button id="nuevo-sorteo">Nuevo Sorteo</button>
+
+    <!-- Firebase scripts -->
+    <script type="module">
+        // Importa las funciones necesarias desde los SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+        // Tu configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbHYpRyyRk5kD7yFC67zKo7gdMAWMJrXc",
+            authDomain: "sorteo-a921d.firebaseapp.com",
+            projectId: "sorteo-a921d",
+            storageBucket: "sorteo-a921d.appspot.com",
+            messagingSenderId: "668084034505",
+            appId: "1:668084034505:web:2a29946dcfb7f1d0dc2618",
+            measurementId: "G-JQRMDWZVTV",
+            databaseURL: "https://sorteo-a921d-default-rtdb.firebaseio.com/"
+        };
+
+        // Inicializa Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        document.getElementById("form").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const nombre = document.getElementById("nombre").value.trim();
+            const apellido = document.getElementById("apellido").value.trim();
+            const numero = parseInt(document.getElementById("numero").value);
+
+            if (!nombre || !apellido || isNaN(numero) || numero < 1 || numero > 99) {
+                showMessage("Por favor ingrese un nombre, apellido y número válidos.");
+                return;
+            }
+
+            // Referencia a la base de datos para ese número
+            const numeroRef = ref(database, 'registros/' + numero);
+
+            // Verificar si el número ya está registrado
+            get(numeroRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    showMessage(`El número ${numero} ya está registrado por ${data.nombre} ${data.apellido}.`);
+                } else {
+                    // Guardar el número, nombre y apellido en Firebase
+                    set(numeroRef, {
+                        nombre: nombre,
+                        apellido: apellido
+                    }).then(() => {
+                        showMessage(`¡Número ${numero} registrado exitosamente para ${nombre} ${apellido}!`);
+                        actualizarLista();
+                    });
+                }
+            }).catch((error) => {
+                showMessage("Error al verificar el número: " + error);
+            });
+
+            // Limpiar el formulario
+            document.getElementById("form").reset();
+        });
+
+        function showMessage(message) {
+            document.getElementById("message").innerText = message;
+        }
+
+        function actualizarLista() {
+            const registroLista = document.getElementById("registro-lista");
+            registroLista.innerHTML = ""; // Limpiar lista actual
+
+            // Obtener todos los registros de Firebase en tiempo real
+            const registrosRef = ref(database, 'registros');
+            onValue(registrosRef, (snapshot) => {
+                registroLista.innerHTML = ""; // Limpiar la lista
+                snapshot.forEach((childSnapshot) => {
+                    const numero = childSnapshot.key;
+                    const data = childSnapshot.val();
+                    const li = document.createElement("li");
+                    li.innerText = `Número ${numero}: ${data.nombre} ${data.apellido}`;
+                    registroLista.appendChild(li);
+                });
+            });
+        }
+
+        // Función para reiniciar la base de datos
+        document.getElementById("nuevo-sorteo").addEventListener("click", function() {
+            const registrosRef = ref(database, 'registros');
+            set(registrosRef, null).then(() => {
+                showMessage("Todos los registros han sido eliminados. ¡Listo para un nuevo sorteo!");
+                actualizarLista(); // Actualizar lista después de reiniciar
+            }).catch((error) => {
+                showMessage("Error al reiniciar la base de datos: " + error);
+            });
+        });
+
+        // Llamar a la función para actualizar la lista al cargar la página
+        document.addEventListener("DOMContentLoaded", actualizarLista);
+    </script>
+
+</body>
+</html>
