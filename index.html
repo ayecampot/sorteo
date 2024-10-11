@@ -49,6 +49,23 @@
         .list li {
             padding: 5px 0;
         }
+
+        .refresh-btn, .new-sorteo-btn {
+            margin-top: 15px;
+        }
+
+        .new-sorteo-section {
+            margin-top: 50px;
+            text-align: center;
+        }
+
+        .warning {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: red;
+            font-weight: bold;
+        }
+
     </style>
 </head>
 <body>
@@ -62,10 +79,8 @@
         <button type="submit">Registrar</button>
     </form>
 
-    <div style="margin: 20px 0;">
-        <button id="refrescar">Refrescar Página</button>
-    </div>
-    
+    <button class="refresh-btn" onclick="location.reload()">Refrescar Página</button>
+
     <div class="message" id="message"></div>
 
     <div class="list" id="list">
@@ -73,14 +88,16 @@
         <ul id="registro-lista"></ul>
     </div>
 
-    <!-- Botón de nuevo sorteo en el pie de página -->
-    <button id="nuevo-sorteo" style="margin-top: 20px;">Nuevo Sorteo</button>
+    <div class="new-sorteo-section">
+        <div class="warning">⚠️ No apretar nuevo sorteo, es solo para quienes administren los mismos</div>
+        <button class="new-sorteo-btn" id="nuevo-sorteo-btn">Nuevo Sorteo</button>
+    </div>
 
     <!-- Firebase scripts -->
     <script type="module">
         // Importa las funciones necesarias desde los SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-        import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+        import { getDatabase, ref, set, get, child, onValue, remove } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
         // Tu configuración de Firebase
         const firebaseConfig = {
@@ -158,24 +175,23 @@
             });
         }
 
-        // Función para reiniciar la base de datos
-        document.getElementById("nuevo-sorteo").addEventListener("click", function() {
-            const registrosRef = ref(database, 'registros');
-            set(registrosRef, null).then(() => {
-                showMessage("Todos los registros han sido eliminados. ¡Listo para un nuevo sorteo!");
-                actualizarLista(); // Actualizar lista después de reiniciar
-            }).catch((error) => {
-                showMessage("Error al reiniciar la base de datos: " + error);
-            });
-        });
-
-        // Evento para refrescar la página
-        document.getElementById("refrescar").addEventListener("click", function() {
-            location.reload(); // Refresca la página
-        });
-
         // Llamar a la función para actualizar la lista al cargar la página
         document.addEventListener("DOMContentLoaded", actualizarLista);
+
+        // Funcionalidad para el botón de "Nuevo Sorteo"
+        document.getElementById("nuevo-sorteo-btn").addEventListener("click", function() {
+            const confirmacion = confirm("¿Estás seguro de que quieres eliminar todos los registros?");
+            if (confirmacion) {
+                const registrosRef = ref(database, 'registros');
+                remove(registrosRef).then(() => {
+                    showMessage("Todos los registros han sido eliminados.");
+                    actualizarLista(); // Actualiza la lista tras el reinicio
+                }).catch((error) => {
+                    showMessage("Error al eliminar los registros: " + error);
+                });
+            }
+        });
+
     </script>
 
 </body>
