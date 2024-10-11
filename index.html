@@ -62,14 +62,15 @@
         <button type="submit">Registrar</button>
     </form>
 
+    <button id="refrescar">Refrescar Página</button>
+    <button id="nuevo-sorteo" style="margin-top: 20px;">Nuevo Sorteo</button>
+
     <div class="message" id="message"></div>
 
     <div class="list" id="list">
         <h2>Lista de números registrados:</h2>
         <ul id="registro-lista"></ul>
     </div>
-
-    <button id="nuevo-sorteo">Nuevo Sorteo</button>
 
     <!-- Firebase scripts -->
     <script type="module">
@@ -162,6 +163,11 @@
             }).catch((error) => {
                 showMessage("Error al reiniciar la base de datos: " + error);
             });
+        });
+
+        // Evento para refrescar la página
+        document.getElementById("refrescar").addEventListener("click", function() {
+            location.reload(); // Refresca la página
         });
 
         // Llamar a la función para actualizar la lista al cargar la página
