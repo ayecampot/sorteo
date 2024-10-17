@@ -1,20 +1,20 @@
-<!DOCTYPE html>
-<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Números (con Firebase)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Poppins', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Asegura que el contenido pueda desplazarse */
-            min-height: 100vh; /* Asegura que el body ocupe toda la altura */
+            justify-content: flex-start;
+            min-height: 100vh;
             margin: 0;
-            overflow-y: auto; /* Permite que toda la página sea desplazable */
+            overflow-y: auto;
             padding: 20px;
+            background-color: #f0f4f8; /* Color de fondo suave */
         }
 
         form {
@@ -26,12 +26,21 @@
         input, button {
             padding: 10px;
             font-size: 16px;
+            border-radius: 8px; /* Bordes redondeados */
+            border: 1px solid #ccc;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: #00bcd4; /* Color de borde al enfocar */
+            outline: none;
         }
 
         .message {
             margin-top: 20px;
             font-size: 18px;
             font-weight: bold;
+            color: #333;
         }
 
         .list {
@@ -42,6 +51,7 @@
 
         .list h2 {
             margin-bottom: 10px;
+            color: #00796b; /* Color de encabezado */
         }
 
         .list ul {
@@ -53,8 +63,16 @@
             padding: 5px 0;
         }
 
-        .refresh-btn, .new-sorteo-btn {
+        .refresh-btn {
             margin-top: 15px;
+            background-color: #ffb3ba; /* Rosa claro */
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .refresh-btn:hover {
+            background-color: #ff7f94; /* Rosa más oscuro para hover */
         }
 
         .new-sorteo-section {
@@ -68,16 +86,54 @@
             color: red;
             font-weight: bold;
         }
+
+        .sorteo-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #28a745; /* Verde para realizar sorteo */
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .sorteo-btn:hover {
+            background-color: #218838; /* Verde más oscuro para hover */
+        }
+
+        .new-sorteo-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: red; /* Rojo para nuevo sorteo */
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .new-sorteo-btn:hover {
+            background-color: darkred; /* Rojo más oscuro para hover */
+        }
+
+        /* Estilo para el botón de registrar */
+        button[type="submit"] {
+            background-color: #00bcd4; /* Verde menta para registrar */
+            color: white;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #0097a7; /* Verde menta más oscuro para hover */
+        }
     </style>
 </head>
+
+
 <body>
 
-    <h1>Registro de Números</h1>
+    <h1>Anotate para el sorteo</h1>
 
     <form id="form">
-        <input type="text" id="nombre" placeholder="Nombre" required>
-        <input type="text" id="apellido" placeholder="Apellido" required>
-        <input type="number" id="numero" placeholder="Número (1-99)" min="1" max="99" required>
+        <input type="text" id="nombre" placeholder="Tu Nombre" required>
+        <input type="text" id="apellido" placeholder="Tu Apellido" required>
+        <input type="number" id="numero" placeholder="Elegí un numero del 1 al 99" min="1" max="99" required>
         <button type="submit">Registrar</button>
     </form>
 
@@ -90,6 +146,10 @@
         <ul id="registro-lista"></ul>
     </div>
 
+    <!-- Botón para realizar el sorteo -->
+    <button class="sorteo-btn" id="realizar-sorteo">Realizar Sorteo</button>
+    <div class="message" id="ganador-message"></div>
+
     <div class="new-sorteo-section">
         <div class="warning">⚠️ No apretar nuevo sorteo, es solo para quienes administren los mismos</div>
         <button class="new-sorteo-btn" id="nuevo-sorteo-btn">Nuevo Sorteo</button>
@@ -97,11 +157,9 @@
 
     <!-- Firebase scripts -->
     <script type="module">
-        // Importa las funciones necesarias desde los SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
         import { getDatabase, ref, set, get, child, onValue, remove } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
-        // Tu configuración de Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAbHYpRyyRk5kD7yFC67zKo7gdMAWMJrXc",
             authDomain: "sorteo-a921d.firebaseapp.com",
@@ -113,7 +171,6 @@
             databaseURL: "https://sorteo-a921d-default-rtdb.firebaseio.com/"
         };
 
-        // Inicializa Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
@@ -129,29 +186,23 @@
                 return;
             }
 
-            // Referencia a la base de datos para ese número
             const numeroRef = ref(database, 'registros/' + numero);
 
-            // Verificar si el número ya está registrado
             get(numeroRef).then((snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.val();
                     showMessage(`El número ${numero} ya está registrado por ${data.nombre} ${data.apellido}.`);
                 } else {
-                    // Guardar el número, nombre y apellido en Firebase
-                    set(numeroRef, {
-                        nombre: nombre,
-                        apellido: apellido
-                    }).then(() => {
-                        showMessage(`¡Número ${numero} registrado exitosamente para ${nombre} ${apellido}!`);
-                        actualizarLista();
-                    });
+                    set(numeroRef, { nombre: nombre, apellido: apellido })
+                        .then(() => {
+                            showMessage(`¡Número ${numero} registrado exitosamente para ${nombre} ${apellido}!`);
+                            actualizarLista();
+                        });
                 }
             }).catch((error) => {
                 showMessage("Error al verificar el número: " + error);
             });
 
-            // Limpiar el formulario
             document.getElementById("form").reset();
         });
 
@@ -161,39 +212,58 @@
 
         function actualizarLista() {
             const registroLista = document.getElementById("registro-lista");
-            registroLista.innerHTML = ""; // Limpiar lista actual
+            registroLista.innerHTML = "";
 
-            // Obtener todos los registros de Firebase en tiempo real
             const registrosRef = ref(database, 'registros');
             onValue(registrosRef, (snapshot) => {
-                registroLista.innerHTML = ""; // Limpiar la lista
+                const registros = {};
                 snapshot.forEach((childSnapshot) => {
-                    const numero = childSnapshot.key;
-                    const data = childSnapshot.val();
-                    const li = document.createElement("li");
-                    li.innerText = `Número ${numero}: ${data.nombre} ${data.apellido}`;
-                    registroLista.appendChild(li);
+                    registros[childSnapshot.key] = childSnapshot.val();
                 });
+
+                for (let i = 1; i <= 99; i++) {
+                    const li = document.createElement("li");
+                    if (registros[i]) {
+                        li.innerText = `Número ${i}: ${registros[i].nombre} ${registros[i].apellido}`;
+                    } else {
+                        li.innerText = `Número ${i}: `;
+                    }
+                    registroLista.appendChild(li);
+                }
             });
         }
 
-        // Llamar a la función para actualizar la lista al cargar la página
         document.addEventListener("DOMContentLoaded", actualizarLista);
 
-        // Funcionalidad para el botón de "Nuevo Sorteo"
         document.getElementById("nuevo-sorteo-btn").addEventListener("click", function() {
             const confirmacion = confirm("¿Estás seguro de que quieres eliminar todos los registros?");
             if (confirmacion) {
                 const registrosRef = ref(database, 'registros');
                 remove(registrosRef).then(() => {
                     showMessage("Todos los registros han sido eliminados.");
-                    actualizarLista(); // Actualiza la lista tras el reinicio
+                    actualizarLista();
                 }).catch((error) => {
                     showMessage("Error al eliminar los registros: " + error);
                 });
             }
         });
 
+        document.getElementById("realizar-sorteo").addEventListener("click", function() {
+            // Generar un número aleatorio entre 1 y 99
+            const numeroAleatorio = Math.floor(Math.random() * 99) + 1;
+
+            const numeroRef = ref(database, 'registros/' + numeroAleatorio);
+            get(numeroRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    document.getElementById("ganador-message").innerText = `El ganador es: Número ${numeroAleatorio}, ${data.nombre} ${data.apellido} 🥳 🎉`;
+                } else {
+                    document.getElementById("ganador-message").innerText = `El ganador es: Número ${numeroAleatorio}, no asignado.`;
+                }
+            }).catch((error) => {
+                showMessage("Error al realizar el sorteo: " + error);
+            });
+        });
     </script>
 
 </body>
